@@ -13,26 +13,28 @@ from PIL import Image
 
 from semseg.util import config
 from semseg.util.util import colorize
+from img_stitching import stitching
 
 cv2.ocl.setUseOpenCL(False)
 
-input_path = 'test/test_1.jpg'
-output_folder = 'result/'
+input_path1 = 'test/test_1.jpg'
+input_path2 = 'test/test_2.jpg'
+output_folder = 'result/mask/'
 config_path = 'semseg/config/project.yaml'
+output_path = 'result/result.jpg'
 
 
 def get_parser():
     parser = argparse.ArgumentParser(description='PyTorch Semantic Segmentation')
-    # parser.add_argument('--config', type=str, default='config/ade20k/ade20k_pspnet50.yaml', help='config file')
-    # parser.add_argument('--image', type=str, default='figure/demo/ADE_val_00001515.jpg', help='input image')
-    # parser.add_argument('opts', help='see config/ade20k/ade20k_pspnet50.yaml for all options', default=None, nargs=argparse.REMAINDER)
     args = parser.parse_args()
     args.config = config_path
-    args.image = input_path
+    args.image1 = input_path1
+    args.image2 = input_path2
     args.opts = None
     assert args.config is not None
     cfg = config.load_cfg_from_cfg_file(args.config)
-    cfg.image = args.image
+    cfg.image1 = args.image1
+    cfg.image2 = args.image2
     if args.opts is not None:
         cfg = config.merge_cfg_from_list(cfg, args.opts)
     return cfg
@@ -71,46 +73,6 @@ def check(args):
                         args.mask_w <= 2 * ((args.train_h - 1) // (8 * args.shrink_factor) + 1) - 1)
     else:
         raise Exception('architecture not supported yet'.format(args.arch))
-
-
-def main():
-    global args, logger
-    args = get_parser()
-    # args.image = input_path
-    check(args)
-    logger = get_logger()
-    os.environ["CUDA_VISIBLE_DEVICES"] = ','.join(str(x) for x in args.test_gpu)
-    #logger.info(args)
-    logger.info("=> creating model ...")
-    #logger.info("Classes: {}".format(args.classes))
-
-    value_scale = 255
-    mean = [0.485, 0.456, 0.406]
-    mean = [item * value_scale for item in mean]
-    std = [0.229, 0.224, 0.225]
-    std = [item * value_scale for item in std]
-    colors = np.loadtxt(args.colors_path).astype('uint8')
-
-    if args.arch == 'psp':
-        from semseg.model.pspnet import PSPNet
-        model = PSPNet(layers=args.layers, classes=args.classes, zoom_factor=args.zoom_factor, pretrained=False)
-    elif args.arch == 'psa':
-        from semseg.model.psanet import PSANet
-        model = PSANet(layers=args.layers, classes=args.classes, zoom_factor=args.zoom_factor, compact=args.compact,
-                       shrink_factor=args.shrink_factor, mask_h=args.mask_h, mask_w=args.mask_w,
-                       normalization_factor=args.normalization_factor, psa_softmax=args.psa_softmax, pretrained=False)
-    #logger.info(model)
-    model = torch.nn.DataParallel(model).cuda()
-    cudnn.benchmark = True
-    if os.path.isfile(args.model_path):
-        logger.info("=> loading checkpoint '{}'".format(args.model_path))
-        checkpoint = torch.load(args.model_path)
-        model.load_state_dict(checkpoint['state_dict'], strict=False)
-        logger.info("=> loaded checkpoint '{}'".format(args.model_path))
-    else:
-        raise RuntimeError("=> no checkpoint found at '{}'".format(args.model_path))
-    test(model.eval(), args.image, args.classes, mean, std, args.base_size, args.test_h, args.test_w, args.scales, colors)
-
 
 def net_process(model, image, mean, std=None, flip=True):
     input = torch.from_numpy(image.transpose((2, 0, 1))).float()
@@ -171,7 +133,7 @@ def scale_process(model, image, classes, crop_h, crop_w, h, w, mean, std=None, s
     return prediction
 
 
-def test(model, image_path, classes, mean, std, base_size, crop_h, crop_w, scales, colors):
+def remove_human(model, image_path, classes, mean, std, base_size, crop_h, crop_w, scales, colors):
     image = cv2.imread(image_path, cv2.IMREAD_COLOR)  # BGR 3 channel ndarray wiht shape H * W * 3
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # convert cv2 read image from BGR order to RGB order
     h, w, _ = image.shape
@@ -190,23 +152,67 @@ def test(model, image_path, classes, mean, std, base_size, crop_h, crop_w, scale
     prediction = np.argmax(prediction, axis=2)
 
     # Create a copy of the original image
-    color = np.copy(image)
+    mask = np.copy(image)
     # Set pixels corresponding to target_class to black
-    color[prediction == 12] = 0
+    mask[prediction == 12] = 0
     # Convert the NumPy array back to a PIL Image
-    color = Image.fromarray(color)
+    mask = Image.fromarray(mask)
 
 
     # gray = 類別
-    gray = np.uint8(prediction)
-    #color = colorize(gray, colors)
+    # gray = np.uint8(prediction)
+    # mask = colorize(gray, colors)
     image_name = image_path.split('/')[-1].split('.')[0]
     #gray_path = os.path.join('./result/', image_name + '_gray.png')
     color_path = os.path.join(output_folder, image_name + '_color.png')
     #cv2.imwrite(gray_path, gray)
-    color.save(color_path)
-    logger.info("=> Prediction saved in {}".format(color_path))
+    mask.save(color_path)
+    logger.info("=> Mask saved in {}".format(color_path))
+    mask = cv2.imread(color_path)
+    return mask
 
+
+def main():
+    global args, logger
+    args = get_parser()
+    check(args)
+    logger = get_logger()
+    os.environ["CUDA_VISIBLE_DEVICES"] = ','.join(str(x) for x in args.test_gpu)
+    logger.info("=> creating model ...")
+    #logger.info("Classes: {}".format(args.classes))
+
+    value_scale = 255
+    mean = [0.485, 0.456, 0.406]
+    mean = [item * value_scale for item in mean]
+    std = [0.229, 0.224, 0.225]
+    std = [item * value_scale for item in std]
+    colors = np.loadtxt(args.colors_path).astype('uint8')
+
+    if args.arch == 'psp':
+        from semseg.model.pspnet import PSPNet
+        model = PSPNet(layers=args.layers, classes=args.classes, zoom_factor=args.zoom_factor, pretrained=False)
+    elif args.arch == 'psa':
+        from semseg.model.psanet import PSANet
+        model = PSANet(layers=args.layers, classes=args.classes, zoom_factor=args.zoom_factor, compact=args.compact,
+                       shrink_factor=args.shrink_factor, mask_h=args.mask_h, mask_w=args.mask_w,
+                       normalization_factor=args.normalization_factor, psa_softmax=args.psa_softmax, pretrained=False)
+
+    model = torch.nn.DataParallel(model).cuda()
+    cudnn.benchmark = True
+    if os.path.isfile(args.model_path):
+        logger.info("=> loading checkpoint '{}'".format(args.model_path))
+        checkpoint = torch.load(args.model_path)
+        model.load_state_dict(checkpoint['state_dict'], strict=False)
+        logger.info("=> loaded checkpoint '{}'".format(args.model_path))
+    else:
+        raise RuntimeError("=> no checkpoint found at '{}'".format(args.model_path))
+    img1 = remove_human(model.eval(), args.image1, args.classes, mean, std, args.base_size, args.test_h, args.test_w, args.scales, colors)
+    img2 = remove_human(model.eval(), args.image2, args.classes, mean, std, args.base_size, args.test_h, args.test_w, args.scales, colors)
+
+    stitching(img1, img2, output_path)
+    # img1 = cv2.imread('result/test_1_color.jpg')
+    # img2 = cv2.imread('result/test_2_color.jpg')
+    #stitching(img1, img2, output_path)
 
 if __name__ == '__main__':
     main()
