@@ -17,8 +17,8 @@ from img_stitching import stitching
 
 cv2.ocl.setUseOpenCL(False)
 
-input_path1 = 'test/test_1.jpg'
-input_path2 = 'test/test_2.jpg'
+input_path1 = 'test/test_5.jpg'
+input_path2 = 'test/test_6.jpg'
 output_folder = 'result/mask/'
 config_path = 'semseg/config/project.yaml'
 output_path = 'result/result.jpg'
@@ -164,11 +164,12 @@ def remove_human(model, image_path, classes, mean, std, base_size, crop_h, crop_
     # mask = colorize(gray, colors)
     image_name = image_path.split('/')[-1].split('.')[0]
     #gray_path = os.path.join('./result/', image_name + '_gray.png')
-    color_path = os.path.join(output_folder, image_name + '_color.png')
+    # color_path = os.path.join(output_folder, image_name + '_color.png')
+    mask_path = os.path.join(output_folder, image_name + '_mask.png')
     #cv2.imwrite(gray_path, gray)
-    mask.save(color_path)
-    logger.info("=> Mask saved in {}".format(color_path))
-    mask = cv2.imread(color_path)
+    mask.save(mask_path)
+    logger.info("=> Mask saved in {}".format(mask_path))
+    mask = cv2.imread(mask_path)
     return mask
 
 

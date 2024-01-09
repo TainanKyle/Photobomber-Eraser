@@ -190,8 +190,8 @@ class Stitcher:
                 # else we need the tranform for this pixel
                 stitch_img[i, j] = img_right[x, y]
             
-        # cv.imwrite('./left.jpg', img_left)
-        # cv.imwrite('./right.jpg', stitch_img)
+        # cv.imwrite('./result/left.jpg', img_left)
+        # cv.imwrite('./result/right.jpg', stitch_img)
         # create the Blender object to blending the image
         blender = Blender()
         if (blending_mode == "linearBlending"):
