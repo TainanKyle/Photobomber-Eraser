@@ -17,11 +17,12 @@ from img_stitching import stitching
 
 cv2.ocl.setUseOpenCL(False)
 
-input_path1 = 'test/test_5.jpg'
-input_path2 = 'test/test_6.jpg'
+input_path1 = 'input_image/test_31.jpg'
+input_path2 = 'input_image/test_32.jpg'
 output_folder = 'result/mask/'
 config_path = 'semseg/config/project.yaml'
 output_path = 'result/result.jpg'
+seg_large_scale = 5
 
 
 def get_parser():
@@ -153,20 +154,33 @@ def remove_human(model, image_path, classes, mean, std, base_size, crop_h, crop_
 
     # Create a copy of the original image
     mask = np.copy(image)
+
+    # Expand the region of extracted people
+    for i in range(h):
+        for j in range(w):
+            if prediction[i, j] == 12:
+                if i-seg_large_scale > 0:
+                    prediction[i-seg_large_scale, j] = 12 
+                if j-seg_large_scale > 0:
+                    prediction[i, j-seg_large_scale] = 12
+    for i in range(h-1, -1, -1):
+        for j in range(w-1, -1, -1):
+            if prediction[i, j] == 12:
+                if i+seg_large_scale < h:
+                    prediction[i+seg_large_scale, j] = 12
+                if j+seg_large_scale < w:
+                    prediction[i, j+seg_large_scale] = 12
+
     # Set pixels corresponding to target_class to black
     mask[prediction == 12] = 0
     # Convert the NumPy array back to a PIL Image
     mask = Image.fromarray(mask)
 
-
     # gray = 類別
     # gray = np.uint8(prediction)
     # mask = colorize(gray, colors)
     image_name = image_path.split('/')[-1].split('.')[0]
-    #gray_path = os.path.join('./result/', image_name + '_gray.png')
-    # color_path = os.path.join(output_folder, image_name + '_color.png')
     mask_path = os.path.join(output_folder, image_name + '_mask.png')
-    #cv2.imwrite(gray_path, gray)
     mask.save(mask_path)
     logger.info("=> Mask saved in {}".format(mask_path))
     mask = cv2.imread(mask_path)
@@ -180,7 +194,6 @@ def main():
     logger = get_logger()
     os.environ["CUDA_VISIBLE_DEVICES"] = ','.join(str(x) for x in args.test_gpu)
     logger.info("=> creating model ...")
-    #logger.info("Classes: {}".format(args.classes))
 
     value_scale = 255
     mean = [0.485, 0.456, 0.406]
@@ -209,11 +222,10 @@ def main():
         raise RuntimeError("=> no checkpoint found at '{}'".format(args.model_path))
     img1 = remove_human(model.eval(), args.image1, args.classes, mean, std, args.base_size, args.test_h, args.test_w, args.scales, colors)
     img2 = remove_human(model.eval(), args.image2, args.classes, mean, std, args.base_size, args.test_h, args.test_w, args.scales, colors)
+    
+    img_ref = cv2.imread(input_path1)
+    stitching(img1, img2, img_ref, output_path)
 
-    stitching(img1, img2, output_path)
-    # img1 = cv2.imread('result/test_1_color.jpg')
-    # img2 = cv2.imread('result/test_2_color.jpg')
-    #stitching(img1, img2, output_path)
 
 if __name__ == '__main__':
     main()

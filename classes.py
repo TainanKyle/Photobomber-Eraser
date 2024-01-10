@@ -8,7 +8,7 @@ class Stitcher:
     def __init__(self):
         pass
     
-    def stitch(self, imgs, blending_mode = "linearBlending", ratio = 0.75):
+    def stitch(self, imgs, img_ref, blending_mode = "linearBlending", ratio = 0.75):
         '''
             The main method to stitch image
         '''
@@ -38,7 +38,7 @@ class Stitcher:
     
         # Step4 - Warp image to create panoramic image
         print("Step4 - Warp image to create panoramic image...")
-        warp_img = self.warp([img_left, img_right], HomoMat, blending_mode) 
+        warp_img = self.warp([img_left, img_right], HomoMat, blending_mode, img_ref) 
         
         return warp_img
     
@@ -159,7 +159,7 @@ class Stitcher:
         
         return Best_H
 
-    def warp(self, imgs, HomoMat, blending_mode):
+    def warp(self, imgs, HomoMat, blending_mode, img_ref):
         '''
            Warp image to create panoramic image
            There are three different blending method - noBlending、linearBlending、linearBlendingWithConstant
@@ -190,12 +190,13 @@ class Stitcher:
                 # else we need the tranform for this pixel
                 stitch_img[i, j] = img_right[x, y]
             
-        # cv.imwrite('./result/left.jpg', img_left)
-        # cv.imwrite('./result/right.jpg', stitch_img)
+        cv.imwrite('./result/left.jpg', img_left)
+        cv.imwrite('./result/right.jpg', stitch_img)
+
         # create the Blender object to blending the image
         blender = Blender()
         if (blending_mode == "linearBlending"):
-            stitch_img = blender.linearBlending([img_left, stitch_img])
+            stitch_img = blender.linearBlending([img_left, stitch_img], img_ref)
         elif (blending_mode == "linearBlendingWithConstant"):
             stitch_img = blender.linearBlendingWithConstantWidth([img_left, stitch_img])
         
@@ -258,22 +259,25 @@ class Homography:
         return H
     
 class Blender:
-    def linearBlending(self, imgs):
+    def linearBlending(self, imgs, img_ref):
         '''
         linear Blending(also known as Feathering)
         '''
         img_left, img_right = imgs
         (hl, wl) = img_left.shape[:2]
         (hr, wr) = img_right.shape[:2]
-        # print((hl, wl))
-        # print((hr, wr))
         img_new = np.copy(img_right)
         img_new[:hl, :wl] = np.copy(img_left)
         img_left = np.copy(img_new)
+
         for i in range(hl):
             for j in range(wl):
+                # use img_right to fill up img_left
                 if (np.count_nonzero(img_right[i, j]) > 0 and np.count_nonzero(img_left[i, j]) == 0):
                     img_left[i, j] = img_right[i, j]
+                # use img_ref to fill up the empty space in both imgs
+                elif (np.count_nonzero(img_right[i, j]) == 0 and np.count_nonzero(img_left[i, j]) == 0):
+                    img_left[i, j] = img_ref[i, j]
         
         img_left_mask = np.zeros((hr, wr), dtype="int")
         img_right_mask = np.zeros((hr, wr), dtype="int")
@@ -300,8 +304,6 @@ class Blender:
         plt.title("overlap_mask")
         plt.imshow(overlap_mask.astype(int), cmap="gray")
 
-        
-
         # compute the alpha mask to linear blending the overlap region
         alpha_mask = np.zeros((hr, wr)) # alpha value depend on left image
         for i in range(hr): 
@@ -326,42 +328,14 @@ class Blender:
                 elif (img_left_mask[i, j] == 0):
                     alpha_mask[i, j] = 0
         
-        
-        # linearBlending_img = np.copy(img_right)
-        # linearBlending_img[:hl, :wl] = np.copy(img_left)
         linearBlending_img = np.copy(img_left)
-        # for i in range(hl):
-        #     for j in range(wl):
-        #         if (img_right_mask[i, j] != 0 and img_left_mask[i, j] == 0):
-        #             linearBlending_img[i, j] = img_right[]
-        # cv.imwrite('./test.jpg', linearBlending_img)
         # linear blending
         for i in range(hr):
             for j in range(wr):
                 if ( np.count_nonzero(overlap_mask[i, j]) > 0):
                     linearBlending_img[i, j] = alpha_mask[i, j] * img_left[i, j] + (1 - alpha_mask[i, j]) * img_right[i, j]
+        linearBlending_img = linearBlending_img[:hl, :wl]
         
-        # for i in range(hl):
-        #     for j in range(wl):
-        #         linearBlending_img[i, j] = alpha_mask[i, j] * img_left[i, j] + (1 - alpha_mask[i, j]) * img_right[i, j]
-
-        # refine the boundary of holes
-        # for step in range(50):        
-        #     for i in range(hl):
-        #         flag = 0
-        #         for j in range(wl):
-        #             # enter the hole in img_left
-        #             if(alpha_mask[i, j] == 0 and flag == 0 and j > 0):
-        #                 flag = 1
-        #                 if(alpha_mask[i, j+step] == 0):
-        #                     linearBlending_img[i, j] = 0.4 * linearBlending_img[i, j] + 0.6 * linearBlending_img[i, j-1]
-        #                 else:
-        #                     continue
-        #             elif(alpha_mask[i, j] == 1 and flag == 1):
-        #                 flag = 0
-        #                 if(alpha_mask[i, j-step] == 0):
-        #                     linearBlending_img[i, j-step-1] = 0.6 * linearBlending_img[i, j-step] + 0.4 * linearBlending_img[i, j-step-1]
-
         return linearBlending_img
     def linearBlendingWithConstantWidth(self, imgs):
         '''
@@ -431,5 +405,5 @@ class Blender:
             for j in range(wr):
                 if (np.count_nonzero(overlap_mask[i, j]) > 0):
                     linearBlendingWithConstantWidth_img[i, j] = alpha_mask[i, j] * img_left[i, j] + (1 - alpha_mask[i, j]) * img_right[i, j]
-        
+          
         return linearBlendingWithConstantWidth_img

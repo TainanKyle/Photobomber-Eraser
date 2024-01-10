@@ -17,22 +17,13 @@ def adjust(img):
     
     return img
 
-def stitching(img_left, img_right, saveFilePath):
+def stitching(img_left, img_right, img_ref, saveFilePath):
     
     # The stitch object to stitch the image
-    blending_mode = "linearBlending" # three mode - noBlending、linearBlending、linearBlendingWithConstant
+    blending_mode = "linearBlending"    # three mode - noBlending、linearBlending、linearBlendingWithConstant
     stitcher = Stitcher()
-    warp_img = stitcher.stitch([img_left, img_right], blending_mode)
+    warp_img = stitcher.stitch([img_left, img_right], img_ref, blending_mode)
 
-    # warp_img = adjust(warp_img)
-
-    # # plot the stitched image
-    # plt.figure(13)
-    # plt.title("warp_img")
-    # plt.imshow(warp_img[:,:,::-1].astype(int))
-
-    # save the stitched iamge
-    # saveFilePath = "./u4.jpg".format(fileName1, fileName2, blending_mode)
     cv2.imwrite(saveFilePath, warp_img)
     print("Result photo saved in", saveFilePath)
         
@@ -43,5 +34,6 @@ if __name__ == "__main__":
         fileName2 = fname2
         img_left = cv2.imread(src_path + fileName1 + ".png")
         img_right = cv2.imread(src_path + fileName2 + ".png")
+        img_ref = cv2.imread(src_path + fileName1 + ".png")
     
-    stitching(img_left, img_right, saveFilePath)
+    stitching(img_left, img_right, img_ref, saveFilePath)
