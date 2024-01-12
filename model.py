@@ -17,12 +17,12 @@ from img_stitching import stitching
 
 cv2.ocl.setUseOpenCL(False)
 
-input_path1 = 'input_image/test_31.jpg'
-input_path2 = 'input_image/test_32.jpg'
+input_path1 = 'input_image/test_29.jpg'
+input_path2 = 'input_image/test_30.jpg'
 output_folder = 'result/mask/'
 config_path = 'semseg/config/project.yaml'
 output_path = 'result/result.jpg'
-seg_large_scale = 5
+seg_large_scale = 7
 
 
 def get_parser():
