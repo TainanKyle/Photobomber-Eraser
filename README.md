@@ -3,7 +3,7 @@
 ## Motivation and Goal
 Dealing with passersby in photos is a common and unavoidable issue. There are times when it's challenging to capture moments without any obstruction from people passing by. Therefore, we were motivated to implement a solution that can eliminate photobombers from photos and restore them, resulting in clean and authentic images.
 
-## Proposed Method
+## Method
 ![image](https://github.com/TainanKyle/Photobumber-Eraser/assets/150419874/2505194c-e3c1-433c-94ce-9b05bc73548a)
 
 - Human Mask Extraction 
@@ -34,5 +34,5 @@ Dealing with passersby in photos is a common and unavoidable issue. There are ti
 [Slide Link](https://docs.google.com/presentation/d/1_xSNHx6IEdSV8wERCFffddFSg87rtolcRObpJMDgy5Q/edit?usp=sharing)
 
 Reference:
-[Image Stitching](https://yungyung7654321.medium.com/python%E5%AF%A6%E4%BD%9C%E8%87%AA%E5%8B%95%E5%85%A8%E6%99%AF%E5%9C%96%E6%8B%BC%E6%8E%A5-automatic-panoramic-image-stitching-28629c912b5a)
+[Image Stitching](https://yungyung7654321.medium.com/python%E5%AF%A6%E4%BD%9C%E8%87%AA%E5%8B%95%E5%85%A8%E6%99%AF%E5%9C%96%E6%8B%BC%E6%8E%A5-automatic-panoramic-image-stitching-28629c912b5a), 
 [PSPNet](https://github.com/hszhao/semseg)
