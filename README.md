@@ -31,6 +31,13 @@ Dealing with passersby in photos is a common and unavoidable issue. There are ti
 * Image with larger angle differences
 ![image](https://github.com/TainanKyle/Photobumber-Eraser/assets/150419874/7f5fcbc4-1d4a-4946-9f70-dabecdb03524)
 
+
+## How to Run
+1. Download the pretrained weights of PSPNet
+2. Modify the paths in model.py
+3. Run `python model.py`
+
+
 [Slide Link](https://docs.google.com/presentation/d/1_xSNHx6IEdSV8wERCFffddFSg87rtolcRObpJMDgy5Q/edit?usp=sharing)
 
 Reference:
