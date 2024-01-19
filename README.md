@@ -1,7 +1,7 @@
 # Photobomber Eraser
 
 ## Motivation and Goal
-Dealing with passersby in photos is a common and unavoidable issue. There are times when it's challenging to capture moments without any obstruction from people passing by. Therefore, we were motivated to implement a solution that can eliminate photobombers from photos and restore them, resulting in clean and authentic images.
+Dealing with passersby in photos is a common and unavoidable issue. There are times when it's challenging to capture moments without any obstruction from people passing by. The motivation occured, to implement a solution that can eliminate photobombers from photos and restore them, resulting in clean and authentic images.
 
 ## Method
 ![image](https://github.com/TainanKyle/Photobumber-Eraser/assets/150419874/2505194c-e3c1-433c-94ce-9b05bc73548a)
